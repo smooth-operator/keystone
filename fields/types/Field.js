@@ -46,7 +46,7 @@ var Base = module.exports.Base = {
 		if (!this.props.label) return null;
 		return <label className="field-label">{this.props.label}</label>;
 	},
-	
+
 	renderNote: function() {
 		if (!this.props.note) return null;
 		return <Note note={this.props.note} />;

@@ -27,49 +27,67 @@ exports = module.exports = function(req, res) {
 			var limit = req.query.limit || 50,
 				page = req.query.page || 1,
 				skip = limit * (page - 1);
-				
-			var filters = req.list.getSearchFilters(req.query.q);
 
-			var count = req.list.model.count(filters),
-				query = req.list.model.find(filters)
-					.limit(limit)
-					.skip(skip)
-					.sort(req.list.defaultSort);
+            function doAutoComplete(filters, req){
+                var count = req.list.model.count(filters),
+                    query = req.list.model.find(filters)
+                        .limit(limit)
+                        .skip(skip)
+                        .sort(req.list.defaultSort);
 
-			if (req.query.context === 'relationship') {
-				var srcList = keystone.list(req.query.list);
-				if (!srcList) return sendError('invalid list provided');
+                if (req.query.context === 'relationship') {
+                    var srcList = keystone.list(req.query.list);
+                    if (!srcList) return sendError('invalid list provided');
 
-				var field = srcList.fields[req.query.field];
-				if (!field) return sendError('invalid field provided');
+                    var field = srcList.fields[req.query.field];
+                    if (!field) return sendError('invalid field provided');
 
-				_.each(req.query.filters, function(value, key) {
-					query.where(key).equals(value ? value : null);
-					count.where(key).equals(value ? value : null);
-				});
-			}
-			
-			count.exec(function(err, total) {
+                    _.each(req.query.filters, function(value, key) {
+                        query.where(key).equals(value ? value : null);
+                        count.where(key).equals(value ? value : null);
+                    });
+                }
 
-				if (err) return sendError('database error', err);
+                count.exec(function(err, total) {
 
-				query.exec(function(err, items) {
+                    if (err) return sendError('database error', err);
 
-					if (err) return sendError('database error', err);
+                    query.exec(function(err, items) {
 
-					sendResponse({
-						total: total,
-						items: items.map(function(i) {
-							return {
-								name: req.list.getDocumentName(i, false) || '(' + i.id + ')',
-								id: i.id
-							};
-						})
-					});
+                        if (err) return sendError('database error', err);
 
-				});
+                        sendResponse({
+                            total: total,
+                            items: items.map(function(i) {
+                                return {
+                                    name: req.list.getDocumentName(i, false) || '(' + i.id + ')',
+                                    id: i.id
+                                };
+                            })
+                        });
 
-			});
+                    });
+
+                });
+            }
+
+            if (req.query.uid){
+                console.log("extra filter");
+                keystone.list('Group').model.where('organizers', req.query.uid).exec(function(err, groups) {
+                    var auxValues=[];
+                    _.each(groups, function(value, key) {
+                        auxValues.push(value.id);
+                    });
+                    var filters = req.list.getSearchFilters(req.query.q);
+                    filters ['group']={'$in' : auxValues} ;
+                    doAutoComplete(filters, req);
+                });
+            }
+            else{
+                console.log("no extra filter");
+                var filters = req.list.getSearchFilters(req.query.q);
+                doAutoComplete(filters, req);
+            }
 
 
 		break;

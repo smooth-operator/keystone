@@ -71,7 +71,13 @@ location.prototype.addToSchema = function() {
 		options = this.options;
 
 	var paths = this.paths = {
+		number: this._path.append('.number'),
+		name: this._path.append('.name'),
 		street1: this._path.append('.street1'),
+		street2: this._path.append('.street2'),
+		suburb: this._path.append('.suburb'),
+		state: this._path.append('.state'),
+		postcode: this._path.append('.postcode'),
 		country: this._path.append('.country'),
 		geo: this._path.append('.geo'),
 		geo_lat: this._path.append('.geo_lat'),
@@ -91,14 +97,27 @@ location.prototype.addToSchema = function() {
 
 	schema.nested[this.path] = true;
 	schema.add({
+		number: getFieldDef(String, 'number'),
+		name: getFieldDef(String, 'name'),
 		street1: getFieldDef(String, 'street1'),
+		street2: getFieldDef(String, 'street2'),
+		street3: getFieldDef(String, 'street3'),
+		suburb: getFieldDef(String, 'suburb'),
+		state: getFieldDef(String, 'state'),
+		postcode: getFieldDef(String, 'postcode'),
 		country: getFieldDef(String, 'country'),
 		geo: { type: [Number], index: '2dsphere' }
 	}, this.path + '.');
 
 	schema.virtual(paths.serialised).get(function() {
 		return _.compact([
+			this.get(paths.number),
+			this.get(paths.name),
 			this.get(paths.street1),
+			this.get(paths.street2),
+			this.get(paths.suburb),
+			this.get(paths.state),
+			this.get(paths.postcode),
 			this.get(paths.country)
 		]).join(', ');
 	});
@@ -153,8 +172,13 @@ location.prototype.format = function(item, values, delimiter) {
  */
 
 location.prototype.isModified = function(item) {
-	return 
+	return item.isModified(this.paths.number) ||
+		item.isModified(this.paths.name) ||
 		item.isModified(this.paths.street1) ||
+		item.isModified(this.paths.street2) ||
+		item.isModified(this.paths.suburb) ||
+		item.isModified(this.paths.state) ||
+		item.isModified(this.paths.postcode) ||
 		item.isModified(this.paths.country) ||
 		item.isModified(this.paths.geo);
 };
@@ -214,7 +238,7 @@ location.prototype.validateInput = function(data, required, item) {
 location.prototype.updateItem = function(item, data) {
 
 	var paths = this.paths,
-		fieldKeys = ['street1', 'country'],
+		fieldKeys = ['number', 'name', 'street1', 'street2', 'suburb', 'state', 'postcode', 'country'],
 		geoKeys = ['geo', 'geo_lat', 'geo_lng'],
 		valueKeys = fieldKeys.concat(geoKeys),
 		valuePaths = valueKeys,
@@ -408,17 +432,35 @@ location.prototype.googleLookup = function(item, region, update, callback) {
 		// parse the address components into a location object
 
 		var location = {};
-		
+
 		_.each(result.address_components, function(val){
-			if ( _.indexOf(val.types, 'locality') >= 0 ) {
-				location.street1 = val.long_name;
+			if ( _.indexOf(val.types, 'street_number') >= 0 ) {
+				location.street1 = location.street1 || [];
+				location.street1.push(val.long_name);
 			}
-			
+			if ( _.indexOf(val.types, 'route') >= 0 ) {
+				location.street1 = location.street1 || [];
+				location.street1.push(val.short_name);
+			}
+			// in some cases, you get suburb, city as locality - so only use the first
+			if ( _.indexOf(val.types, 'locality') >= 0 && !location.suburb) {
+				location.suburb = val.long_name;
+			}
+			if ( _.indexOf(val.types, 'administrative_area_level_1') >= 0 ) {
+				location.state = val.short_name;
+			}
 			if ( _.indexOf(val.types, 'country') >= 0 ) {
 				location.country = val.long_name;
 			}
+			if ( _.indexOf(val.types, 'postal_code') >= 0 ) {
+				location.postcode = val.short_name;
+			}
 		});
-		
+
+		if (Array.isArray(location.street1)) {
+			location.street1 = location.street1.join(' ');
+		}
+
 		location.geo = [
 			result.geometry.location.lng,
 			result.geometry.location.lat

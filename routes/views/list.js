@@ -54,11 +54,84 @@ exports = module.exports = function(req, res) {
 	}
 	
 	var renderView = function() {
-		
+		//added user check
+		if (!req.user.canAccessKeystone){
+			if (req.list.path=='meetups'){
+				var Group = keystone.list('Group');
+
+				Group.model.find()
+					.where('organizers', req.user._id)
+					.exec(function(err, groups) {
+						var allowedGroups=[];
+						groups.forEach(function(value, index){
+							allowedGroups.push(value.id);
+						});
+						if (allowedGroups.length>0){
+							queryFilters['group']={$in : allowedGroups};	
+						}
+						else{
+							queryFilters['key']='123';
+						}
+						completeRender();
+					});	
+			}
+			else if (req.list.path=='groups'){
+				queryFilters['organizers']=req.user._id;
+				completeRender();
+			}
+			else if (req.list.path=='posts'){
+				queryFilters['author']=req.user._id;
+				completeRender();
+			}else if (req.list.path=='talks' || req.list.path=='rsvps'){
+				var Group = keystone.list('Group');
+				var Meetup = keystone.list('Meetup');
+				Group.model.find()
+					.where('organizers', req.user._id)
+					.exec(function(err, groups) {
+						var allowedGroups=[];
+						var MeetupQuery=Meetup.model.find()
+						
+						groups.forEach(function(value, index){
+							allowedGroups.push(value.id);
+						});
+						
+						if (allowedGroups.length>0){
+							MeetupQuery.where('group',{$in : allowedGroups});
+						}
+						else{
+							MeetupQuery.where('key','123');
+						}
+						
+						MeetupQuery.exec(function(err, meetups) {
+							var allowedMeetups=[];
+                            meetups.forEach(function(value, index){
+								allowedMeetups.push(value.id);
+							});
+							if (allowedMeetups.length>0){
+								queryFilters['meetup']={$in : allowedMeetups};
+							}
+							else{
+								queryFilters['key']='123';
+							}
+							completeRender();
+						});
+					});
+			}
+			else{
+				res.notfound();
+			}
+		}
+		else{
+			completeRender();
+		}
+	};
+	
+	var completeRender = function() {
+
 		var query = req.list.paginate({ filters: queryFilters, page: req.params.page, perPage: req.list.get('perPage') }).sort(sort.by);
-		
+
 		req.list.selectColumns(query, columns);
-		
+
 		var link_to = function(params) {
 			var p = params.page || '';
 			delete params.page;
@@ -72,27 +145,27 @@ exports = module.exports = function(req, res) {
 			params = querystring.stringify(_.defaults(params, queryParams));
 			return '/keystone/' + req.list.path + (p ? '/' + p : '') + (params ? '?' + params : '');
 		};
-		
+
 		query.exec(function(err, items) {
-			
+
 			if (err) {
 				console.log(err);
 				return res.status(500).send('Error querying items:<br><br>' + JSON.stringify(err));
 			}
-			
+
 			// if there were results but not on this page, reset the page
 			if (req.params.page && items.total && !items.results.length) {
 				return res.redirect('/keystone/' + req.list.path);
 			}
-			
+
 			// go straight to the result if there was a search, and only one result
 			if (req.query.search && items.total === 1 && items.results.length === 1) {
 				return res.redirect('/keystone/' + req.list.path + '/' + items.results[0].id);
 			}
-			
+
 			var download_link = '/keystone/download/' + req.list.path,
 				downloadParams = {};
-				
+
 			if (req.query.q) {
 				downloadParams.q = req.query.q;
 			}
@@ -102,15 +175,15 @@ exports = module.exports = function(req, res) {
 			if (req.query.cols) {
 				downloadParams.cols = req.query.cols;
 			}
-			
+
 			downloadParams = querystring.stringify(downloadParams);
-			
+
 			if (downloadParams) {
 				download_link += '?' + downloadParams;
 			}
-			
+
 			var appName = keystone.get('name') || 'Keystone';
-			
+
 			keystone.render(req, res, 'list', _.extend(viewLocals, {
 				section: keystone.nav.by.list[req.list.key] || {},
 				title: appName + ': ' + req.list.plural,
@@ -127,10 +200,9 @@ exports = module.exports = function(req, res) {
 				submitted: req.body || {},
 				query: req.query
 			}));
-			
-		});
-	
-	};
+
+		});	
+	}
 	
 	var checkCSRF = function() {
 		var pass = keystone.security.csrf.validate(req);

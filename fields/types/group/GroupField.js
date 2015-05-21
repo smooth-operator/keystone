@@ -7,10 +7,10 @@ var Select = require('react-select'),
 
 module.exports = Field.create({
 	
-	displayName: 'RelationshipField',
+	displayName: 'GroupField',
 	
 	shouldCollapse: function() {
-		// many:true relationships have an Array for a value
+		// many:true Groups have an Array for a value
 		// so need to check length instead
 		if(this.props.many) {
 			return this.props.collapse && !this.props.value.length;
@@ -111,19 +111,19 @@ module.exports = Field.create({
 	},
 
 	buildOptionQuery: function (input) {
-        if (this.props.path=="meetup" && (Keystone.list.path=="talks" || Keystone.list.path=="rsvps")  && this.props.isSA!='true'){
-            return  'context=relationship&q=' + input +
-                '&list=' + Keystone.list.path +
-                '&field=' + this.props.path +
-                '&uid=' + this.props.userID +
-                '&' + this.buildFilters();
-        }
-        else {
-            return  'context=relationship&q=' + input +
-                '&list=' + Keystone.list.path +
-                '&field=' + this.props.path +
-                '&' + this.buildFilters();
-        }
+		var filters = this.buildFilters();
+		console.log(this.props);
+		if (this.props.isSA!='true') {
+			if (filters!=''){
+				filters=filters+'&';
+			} 
+			filters=filters+'filters[organizers]=' + encodeURIComponent(this.props.userID)
+		}
+		
+		return  'context=relationship&q=' + input +
+				'&list=' + Keystone.list.path +
+				'&field=' + this.props.path +
+				'&' + filters;
 	},
 
 	getOptions: function(input, callback) {
@@ -187,7 +187,7 @@ module.exports = Field.create({
 		var body = [];
 
 		body.push(<Select multi={this.props.many} onChange={this.updateValue} name={this.props.path} asyncOptions={this.getOptions} value={this.state.expandedValues} />);
-		
+
 		if (!this.props.many && this.props.value) {
 			body.push(
 				<a href={'/keystone/' + this.props.refList.path + '/' + this.props.value} className='btn btn-link btn-goto-linked-item'>

@@ -24,7 +24,6 @@ gulp.task('build-scripts', function() {
 		})
 		.add('./admin/src/app.js')
 		.transform(reactify)
-		.transform(shimify)
 		.bundle()
 		.on('error', function(e) {
 			gutil.log('Browserify Error', e);

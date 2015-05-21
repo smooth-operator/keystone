@@ -47,18 +47,19 @@ var View = React.createClass({
 	},
 	
 	render: function() {
+		
 		if (!this.state.itemData) return <div />;
 		return (
 			<div>
 				{this.renderCreateForm()}
 				<Header list={this.state.list} data={this.state.itemData} drilldown={this.state.itemDrilldown} toggleCreate={this.toggleCreate} />
-				<EditForm list={this.state.list} data={this.state.itemData} />
+				<EditForm list={this.state.list} data={this.state.itemData} isSA={this.props.isSA} userID={this.props.userID} />
 			</div>
 		);
 	}
 	
 });
 
-exports.render = function(id) {
-	React.render(<View itemId={id} />, document.getElementById('item-view'));
+exports.render = function( id, isSA, userID ) {
+	React.render(<View itemId={id} isSA={isSA} userID={userID} />, document.getElementById('item-view'));
 };

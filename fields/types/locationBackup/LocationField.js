@@ -23,7 +23,13 @@ module.exports = Field.create({
 	componentWillMount: function() {
 		
 		var collapsedFields = {};
-				
+		
+		_.each(['number', 'name', 'street2', 'geo'], function(i) {
+			if (!this.props.value[i]) {
+				collapsedFields[i] = true;
+			}
+		}, this);
+		
 		this.setState({
 			collapsedFields: collapsedFields
 		});
@@ -69,7 +75,13 @@ module.exports = Field.create({
 	
 	formatValue: function() {
 		return _.compact([
+			this.props.value.number,
+			this.props.value.name,
 			this.props.value.street1,
+			this.props.value.street2,
+			this.props.value.suburb,
+			this.props.value.state,
+			this.props.value.postcode,
 			this.props.value.country
 		]).join(', ');
 	},
@@ -95,6 +107,24 @@ module.exports = Field.create({
 			</div>
 		);
 		
+	},
+	
+	renderStateAndPostcode: function() {
+		return (
+			<div className="row">
+				<div className="col-sm-2 location-field-label">
+					<label className="text-muted">State/Postcode</label>
+				</div>
+				<div className="col-sm-10 col-md-7 col-lg-6 location-field-controls"><div className="form-row">
+					<div className="col-xs-6">
+						<input type="text" name={this.props.path + '.state'} ref="state" value={this.props.value.state} onChange={this.fieldChanged.bind(this, 'state')} className="form-control" placeholder="State" />
+					</div>
+					<div className="col-xs-6">
+						<input type="text" name={this.props.path + '.postcode'} ref="postcode" value={this.props.value.postcode} onChange={this.fieldChanged.bind(this, 'postcode')} className="form-control" placeholder="Postcode" />
+					</div>
+				</div></div>
+			</div>
+		);
 	},
 	
 	renderGeo: function() {
@@ -166,8 +196,13 @@ module.exports = Field.create({
 		return <div className="field field-type-location">
 			<div className="field-ui">
 				<label>{this.props.label}</label>
-
-				{this.renderField('street1', 'City')}
+				{showMore}
+				{this.renderField('number', 'PO Box / Shop', true)}
+				{this.renderField('name', 'Building Name', true)}
+				{this.renderField('street1', 'Street Address')}
+				{this.renderField('street2', 'Street Address 2', true)}
+				{this.renderField('suburb', 'Suburb')}
+				{this.renderStateAndPostcode()}
 				{this.renderField('country', 'Country')}
 				{this.renderGeo()}
 				{this.renderGoogleOptions()}

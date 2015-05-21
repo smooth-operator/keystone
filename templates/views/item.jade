@@ -11,13 +11,13 @@ block js
 		Keystone.list = !{JSON.stringify(list.getOptions())};
 		Keystone.wysiwyg = { options: !{JSON.stringify(wysiwygOptions)} };
 		
-		App.Views.Item.render("!{item.id}");
+		App.Views.Item.render("!{item.id}", "!{user.canAccessKeystone}", "!{user.id}");
 		
 block content
 	// Attach point for new React View
 	div#item-view
 	
-	if showRelationships
+	if showRelationships && user.canAccessKeystone
 		h2.relationship-heading.form-heading Relationships
 			each rel in relationships
 				if rel.items.results.length

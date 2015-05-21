@@ -7,10 +7,10 @@ var Select = require('react-select'),
 
 module.exports = Field.create({
 	
-	displayName: 'RelationshipField',
+	displayName: 'meetupRelationshipField',
 	
 	shouldCollapse: function() {
-		// many:true relationships have an Array for a value
+		// many:true meetupRelationships have an Array for a value
 		// so need to check length instead
 		if(this.props.many) {
 			return this.props.collapse && !this.props.value.length;
@@ -111,19 +111,10 @@ module.exports = Field.create({
 	},
 
 	buildOptionQuery: function (input) {
-        if (this.props.path=="meetup" && (Keystone.list.path=="talks" || Keystone.list.path=="rsvps")  && this.props.isSA!='true'){
-            return  'context=relationship&q=' + input +
-                '&list=' + Keystone.list.path +
-                '&field=' + this.props.path +
-                '&uid=' + this.props.userID +
-                '&' + this.buildFilters();
-        }
-        else {
-            return  'context=relationship&q=' + input +
-                '&list=' + Keystone.list.path +
-                '&field=' + this.props.path +
-                '&' + this.buildFilters();
-        }
+		return  'context=relationship&q=' + input +
+				'&list=' + Keystone.list.path +
+				'&field=' + this.props.path +
+				'&' + this.buildFilters();
 	},
 
 	getOptions: function(input, callback) {

@@ -136,7 +136,6 @@ var EditForm = React.createClass({
 			headings = 0;
 		
 		_.each(this.props.list.uiElements, function(el) {
-			
 			if (el.type === 'heading') {
 				
 				headings++;
@@ -152,7 +151,11 @@ var EditForm = React.createClass({
 					return;
 				}
 				
-				elements[field.path] = React.createElement(Fields[field.type], this.getFieldProps(field));
+				var propsAux=this.getFieldProps(field);
+				propsAux.isSA = this.props.isSA
+				propsAux.userID = this.props.userID
+				
+				elements[field.path] = React.createElement(Fields[field.type], propsAux);
 				
 			}
 			
